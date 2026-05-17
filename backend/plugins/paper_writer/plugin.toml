@@ -1,0 +1,5 @@
+[plugin]
+name = "paper_writer"
+display_name = "写论文"
+version = "0.1.0"
+dependencies = ["knowledge-base", "literature"]

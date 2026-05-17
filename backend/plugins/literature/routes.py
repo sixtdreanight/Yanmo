@@ -1,0 +1,122 @@
+from fastapi import APIRouter, Request
+from pydantic import BaseModel, Field
+from backend.plugins.literature.summarizer import summarize_paper
+from backend.plugins.literature.crawlers import CrawlerManager
+from backend.plugins.literature.crawlers.arxiv import ArxivCrawler
+from backend.plugins.literature.crawlers.semantic_scholar import SemanticScholarCrawler
+from backend.plugins.literature.crawlers.dblp import DBLPCrawler
+
+
+class FetchRequest(BaseModel):
+    query: str = Field(max_length=500)
+    max_results: int = Field(default=10, ge=1, le=50)
+    sources: list[str] | None = None
+
+
+class InterestsUpdate(BaseModel):
+    keywords: list[str] = Field(max_length=20)
+
+
+def _get_manager() -> CrawlerManager:
+    manager = CrawlerManager()
+    manager.register(ArxivCrawler())
+    manager.register(SemanticScholarCrawler())
+    manager.register(DBLPCrawler())
+    return manager
+
+
+def create_router(plugin) -> APIRouter:
+    router = APIRouter(prefix="/api/literature", tags=["literature"])
+    manager = _get_manager()
+
+    @router.get("/sources")
+    async def list_sources():
+        return {"sources": [
+            {"name": c.name, "display_name": c.display_name}
+            for c in manager._crawlers
+        ]}
+
+    @router.get("/interests")
+    async def get_interests(request: Request):
+        storage = request.app.state.storage
+        storage.sql_execute(
+            "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)"
+        )
+        rows = storage.sql_query("SELECT value FROM kv WHERE key = 'literature_interests'")
+        if rows:
+            import json
+            return {"keywords": json.loads(rows[0]["value"])}
+        return {"keywords": []}
+
+    @router.put("/interests")
+    async def set_interests(req: InterestsUpdate, request: Request):
+        storage = request.app.state.storage
+        import json
+        storage.sql_execute(
+            "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)"
+        )
+        storage.sql_execute(
+            "INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)",
+            ("literature_interests", json.dumps(req.keywords)),
+        )
+        return {"status": "ok", "keywords": req.keywords}
+
+    @router.post("/feed")
+    async def get_feed(request: Request):
+        storage = request.app.state.storage
+        storage.sql_execute(
+            "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)"
+        )
+        rows = storage.sql_query("SELECT value FROM kv WHERE key = 'literature_interests'")
+
+        import json
+        keywords: list[str] = []
+        if rows:
+            keywords = json.loads(rows[0]["value"])
+
+        queries = keywords if keywords else ["machine learning"]
+
+        all_papers: list[dict] = []
+        errors: list[str] = []
+
+        for kw in queries[:3]:
+            result = await manager.search_all(kw, max_results=8)
+            all_papers.extend(result.papers)
+            errors.extend(result.errors)
+
+        seen: set[str] = set()
+        unique: list[dict] = []
+        for p in all_papers:
+            pid = p.get("id") or p.get("arxiv_id", "")
+            if pid and pid not in seen:
+                seen.add(pid)
+                unique.append(p)
+            elif not pid:
+                unique.append(p)
+
+        unique.sort(key=lambda p: p.get("published", ""), reverse=True)
+        return {
+            "papers": unique[:30],
+            "total": len(unique),
+            "interests": keywords,
+            "sources": manager.sources,
+            "errors": errors[:5],
+        }
+
+    @router.post("/fetch")
+    async def fetch_papers(req: FetchRequest):
+        result = await manager.search_all(req.query, req.max_results, req.sources)
+        return {
+            "papers": result.papers,
+            "total": result.total_found,
+            "sources": result.source,
+            "errors": result.errors[:5],
+        }
+
+    @router.post("/summarize")
+    async def summarize(req: dict, request: Request):
+        router_llm = request.app.state.llm_router
+        summary = await summarize_paper(req, router_llm)
+        return {"summary": summary}
+
+    return router

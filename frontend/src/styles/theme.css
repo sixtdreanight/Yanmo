@@ -1,0 +1,159 @@
+/* === 研墨 · 温暖实验室角落 === */
+
+:root {
+  /* Background */
+  --bg-base: #fdf6f0;
+  --bg-card: #fffbf7;
+  --bg-card-hover: #fff9f2;
+  --bg-surface: #fef8f3;
+  --bg-input: #ffffff;
+  --bg-sidebar: #faf5ee;
+
+  /* Text */
+  --text-primary: #373a3c;
+  --text-secondary: #6b6e70;
+  --text-muted: #99968e;
+  --text-link: #b45309;
+
+  /* Accent — warm amber */
+  --accent: #d97706;
+  --accent-light: #fef3c7;
+  --accent-soft: #fdf0d5;
+  --accent-border: #f5d0a0;
+
+  /* Status colors — warmer variants */
+  --green: #65a30d;
+  --green-bg: #ecfccb;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
+  --amber: #d97706;
+  --amber-bg: #fffbeb;
+
+  /* Borders */
+  --border: #e8e0d5;
+  --border-light: #f0e8db;
+
+  /* Shadows — warm and soft */
+  --shadow-sm: 0 1px 2px rgba(120, 80, 40, 0.04);
+  --shadow: 0 1px 3px rgba(120, 80, 40, 0.06), 0 1px 2px rgba(120, 80, 40, 0.04);
+  --shadow-md: 0 4px 6px rgba(120, 80, 40, 0.05), 0 2px 4px rgba(120, 80, 40, 0.04);
+  --shadow-lg: 0 10px 15px rgba(120, 80, 40, 0.06), 0 4px 6px rgba(120, 80, 40, 0.04);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Fonts */
+  --font-sans: 'Noto Sans SC', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  /* Transitions */
+  --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === Global Reset === */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+/* Subtle noise texture overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Selection color */
+::selection {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Link */
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* Input base */
+input, textarea, select, button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent-border) !important;
+  box-shadow: 0 0 0 3px var(--accent-soft) !important;
+}
+
+/* Button base */
+button {
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+/* Card base */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+.card:hover {
+  box-shadow: var(--shadow);
+}
+
+/* Badge base */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}

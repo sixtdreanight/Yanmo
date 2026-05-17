@@ -1,0 +1,23 @@
+from fastapi import APIRouter
+
+
+class FormulaPlugin:
+    name = "formula"
+    display_name = "验公式"
+    version = "0.1.0"
+
+    async def on_load(self, bus, config):
+        self._bus = bus
+        self._config = config
+
+    async def on_unload(self):
+        pass
+
+    def get_routes(self) -> APIRouter:
+        from backend.plugins.formula.routes import create_router
+        return create_router(self)
+
+    def get_commands(self) -> list:
+        return ["/verify", "/convert"]
+
+Plugin = FormulaPlugin

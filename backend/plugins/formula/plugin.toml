@@ -1,0 +1,5 @@
+[plugin]
+name = "formula"
+display_name = "验公式"
+version = "0.1.0"
+dependencies = []
