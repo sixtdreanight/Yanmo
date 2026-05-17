@@ -69,6 +69,21 @@ export const LiteraturePanel: React.FC = () => {
     loadFeed();
   }, [loadFeed]);
 
+  const [gaps, setGaps] = useState<{ direction: string; confidence: string; reason: string }[]>([]);
+  const [showGaps, setShowGaps] = useState(false);
+
+  const findGaps = async () => {
+    if (papers.length === 0) return;
+    const res = await fetch('http://127.0.0.1:8000/api/evaluator/gap-analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ papers: papers.slice(0, 10) }),
+    });
+    const data = await res.json();
+    setGaps(data.gaps || []);
+    setShowGaps(true);
+  };
+
   const saveInterests = async (updated: string[]) => {
     setInterests(updated);
     await fetch('http://127.0.0.1:8000/api/literature/interests', {
@@ -145,6 +160,10 @@ export const LiteraturePanel: React.FC = () => {
             style={{ padding: '6px 16px', background: 'transparent', color: '#888', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
             {showSearch ? 'Hide Search' : 'Search...'}
           </button>
+          <button onClick={findGaps} disabled={papers.length === 0}
+            style={{ padding: '6px 16px', background: 'transparent', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
+            找思路
+          </button>
           {papers.length > 0 && (
             <span style={{ fontSize: 12, color: '#aaa', alignSelf: 'center' }}>
               {papers.length} papers
@@ -175,6 +194,28 @@ export const LiteraturePanel: React.FC = () => {
           <div style={{ fontSize: 13 }}>
             Add your research interests above and click "Refresh Feed"
           </div>
+        </div>
+      )}
+
+      {/* Gap analysis results */}
+      {showGaps && gaps.length > 0 && (
+        <div style={{ marginBottom: 20, border: '1px solid var(--accent-border)', borderRadius: 10, padding: 16, background: 'var(--accent-soft)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--accent)' }}>Research Gaps</span>
+            <button onClick={() => setShowGaps(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>×</button>
+          </div>
+          {gaps.map((g, i) => (
+            <div key={i} style={{ marginBottom: 8, fontSize: 13, lineHeight: 1.6 }}>
+              <span style={{ fontWeight: 600 }}>{g.direction}</span>
+              <span style={{
+                marginLeft: 8, fontSize: 10, padding: '1px 6px', borderRadius: 8,
+                background: g.confidence === 'high' ? 'var(--red-bg)' : 'var(--amber-bg)',
+                color: g.confidence === 'high' ? 'var(--red)' : 'var(--amber)',
+              }}>{g.confidence === 'high' ? 'high confidence' : 'medium'}</span>
+              <div style={{ color: 'var(--text-secondary)', marginTop: 2 }}>{g.reason}</div>
+            </div>
+          ))}
         </div>
       )}
 

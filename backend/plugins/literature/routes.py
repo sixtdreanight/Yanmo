@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from backend.plugins.literature.summarizer import summarize_paper
+from backend.plugins.literature.dedup import deduplicate
 from backend.plugins.literature.crawlers import CrawlerManager
 from backend.plugins.literature.crawlers.arxiv import ArxivCrawler
 from backend.plugins.literature.crawlers.semantic_scholar import SemanticScholarCrawler
@@ -95,9 +96,11 @@ def create_router(plugin) -> APIRouter:
                 unique.append(p)
 
         unique.sort(key=lambda p: p.get("published", ""), reverse=True)
+        deduped = deduplicate(unique)
         return {
-            "papers": unique[:30],
-            "total": len(unique),
+            "papers": deduped[:30],
+            "total": len(deduped),
+            "duplicates_removed": len(unique) - len(deduped),
             "interests": keywords,
             "sources": manager.sources,
             "errors": errors[:5],

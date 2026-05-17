@@ -1,7 +1,8 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from backend.plugins.paper_writer.outline import generate_outline
 from backend.plugins.paper_writer.citation import parse_bibtex
+from backend.plugins.paper_writer.deai import deai_text, detect_ai_score
 
 
 class OutlineRequest(BaseModel):
@@ -10,6 +11,10 @@ class OutlineRequest(BaseModel):
 
 class BibtexRequest(BaseModel):
     bibtex: str
+
+
+class DeAIRequest(BaseModel):
+    text: str = Field(max_length=50000)
 
 
 def create_router(plugin) -> APIRouter:
@@ -34,6 +39,18 @@ def create_router(plugin) -> APIRouter:
                  "year": e.year, "journal": e.journal or e.booktitle}
                 for e in entries
             ]
+        }
+
+    @router.post("/deai")
+    async def deai(req: DeAIRequest):
+        score = detect_ai_score(req.text)
+        cleaned = deai_text(req.text)
+        return {
+            "original_score": score["score"],
+            "original_flags": score["flags"],
+            "original_summary": score["summary"],
+            "cleaned_text": cleaned,
+            "cleaned_score": detect_ai_score(cleaned)["score"],
         }
 
     return router

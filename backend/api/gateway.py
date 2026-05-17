@@ -5,7 +5,9 @@ import json
 import logging
 import os
 
-from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -15,6 +17,7 @@ from backend.core.config import Config
 from backend.core.storage import Storage
 from backend.core.security import SecurityManager, Classification
 from backend.core.llm_router import LLMRouter
+from backend.core.scheduler import TaskScheduler
 
 logger = logging.getLogger(__name__)
 
@@ -62,19 +65,10 @@ def _rebuild_llm_router(config: Config, app: FastAPI) -> None:
 
 
 def create_app(config: Config) -> FastAPI:
-    app = FastAPI(title="研墨", version="0.1.0")
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://localhost:5174", "tauri://localhost"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     bus = EventBus()
     storage = Storage(config.data_dir)
     security = SecurityManager()
+    scheduler = TaskScheduler(tick_interval=30.0)
     llm_router = LLMRouter(
         ollama_base_url=config.ollama_base_url,
         ollama_model=config.ollama_model,
@@ -84,9 +78,59 @@ def create_app(config: Config) -> FastAPI:
     )
     engine = PluginEngine(bus=bus, config=config.to_dict())
 
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        await scheduler.start()
+        # Load plugins on startup
+        manifests = engine.discover_all()
+        for manifest in manifests:
+            await engine.load_plugin_from_path(manifest["path"], manifest["name"])
+        # Register plugin routes
+        for name, plugin in engine.list_plugins().items():
+            router = plugin.get_routes()
+            if router:
+                app.include_router(router)
+        logger.info("All plugins loaded: %s", list(engine.list_plugins().keys()))
+        # Register auto-crawl for literature plugin
+        if "literature" in engine.list_plugins():
+            async def auto_crawl():
+                from backend.plugins.literature.crawlers import CrawlerManager
+                from backend.plugins.literature.crawlers.arxiv import ArxivCrawler
+                from backend.plugins.literature.crawlers.semantic_scholar import SemanticScholarCrawler
+                from backend.plugins.literature.crawlers.dblp import DBLPCrawler
+                import json
+                manager = CrawlerManager()
+                manager.register(ArxivCrawler())
+                manager.register(SemanticScholarCrawler())
+                manager.register(DBLPCrawler())
+                rows = storage.sql_query("SELECT value FROM kv WHERE key = 'literature_interests'")
+                keywords = json.loads(rows[0]["value"]) if rows else ["machine learning"]
+                count = 0
+                for kw in keywords[:3]:
+                    result = await manager.search_all(kw, max_results=5)
+                    count += len(result.papers)
+                if count > 0:
+                    await bus.emit("paper.saved", {"count": count, "auto": True})
+                logger.info("Auto-crawl: %d new papers", count)
+            scheduler.add("literature-auto-crawl", auto_crawl, interval_seconds=3600)
+        yield
+        await scheduler.stop()
+        await engine.shutdown()
+
+    app = FastAPI(title="研墨", version="0.1.0", lifespan=lifespan)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://localhost:5174", "tauri://localhost"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.state.bus = bus
     app.state.storage = storage
     app.state.security = security
+    app.state.scheduler = scheduler
     app.state.llm_router = llm_router
     app.state.engine = engine
     app.state.config = config
@@ -163,19 +207,35 @@ def create_app(config: Config) -> FastAPI:
     engine.set_user_plugins_dir(user_plugins_dir)
     engine._plugin_dirs = [builtin_plugins_dir, user_plugins_dir]
 
-    @app.on_event("startup")
-    async def load_plugins():
-        manifests = engine.discover_all()
-        for manifest in manifests:
-            loaded = await engine.load_plugin_from_path(
-                manifest["path"], manifest["name"]
-            )
-            if loaded:
-                plugin = engine._plugins.get(manifest["name"])
-                if plugin:
-                    router = plugin.get_routes()
-                    if router:
-                        app.include_router(router)
+    # WebSocket for real-time push
+    @app.websocket("/api/ws")
+    async def websocket_endpoint(ws: WebSocket):
+        await ws.accept()
+        # Forward event bus events to WebSocket
+        async def forward(data: dict):
+            try:
+                await ws.send_json({"event": "paper.saved", "data": data})
+            except Exception:
+                pass
+
+        bus.on("paper.saved", forward)
+        try:
+            while True:
+                await ws.receive_text()  # keep alive
+        except WebSocketDisconnect:
+            bus.off("paper.saved", forward)
+
+    # Scheduler routes
+    @app.get("/api/scheduler")
+    async def scheduler_status(request: Request):
+        sched = request.app.state.scheduler
+        return {"tasks": sched.list_tasks()}
+
+    @app.post("/api/scheduler/{name}/run")
+    async def scheduler_run(name: str, request: Request):
+        sched = request.app.state.scheduler
+        ok = await sched.run_once(name)
+        return {"status": "ok" if ok else "not_found"}
 
     # Plugin management routes
     @app.get("/api/plugins/available")
