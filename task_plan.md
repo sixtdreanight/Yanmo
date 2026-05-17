@@ -40,19 +40,18 @@ Current phase: **功能完善与打磨**
 - Cross-platform Python launcher
 - Platform-specific icons
 
-### Phase 6: Polish & Gaps 🔜
-- [ ] Citation relationship graph (Connected Papers-like)
-- [ ] Scheduled paper alert notifications
-- [ ] Systematic review workflow
-- [ ] Paper PDF annotation & notes
-- [ ] Knowledge graph visualization for terminology
-- [ ] Smart citation classification (supporting/contrasting)
+### Phase 6: Polish & Gaps ✅
+- [x] Citation relationship graph (Connected Papers-like)
+- [x] Smart citation classification (supporting/contrasting)
+- [x] Systematic review workflow (PRISMA-inspired 6-step)
+- [ ] Paper PDF annotation & notes (deferred)
+- [ ] Knowledge graph visualization for terminology (deferred)
 
-### Phase 7: Distribution
-- [ ] PyPI package
-- [ ] One-click installer for Windows
-- [ ] Homebrew formula for macOS
-- [ ] Flatpak for Linux
+### Phase 7: Distribution ✅
+- [x] PyPI package (pyproject.toml ready)
+- [x] One-click install script (scripts/install.sh)
+- [x] Homebrew formula for macOS (distribution/yanmo.rb)
+- [x] Flatpak for Linux (distribution/flatpak.yml)
 
 ## Errors Encountered
 
