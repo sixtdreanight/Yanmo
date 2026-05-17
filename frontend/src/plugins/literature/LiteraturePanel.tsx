@@ -84,6 +84,19 @@ export const LiteraturePanel: React.FC = () => {
     setShowGaps(true);
   };
 
+  const [graph, setGraph] = useState<{ nodes: { id: string; name: string; symbolSize: number }[]; edges: { source: string; target: string; weight: number; shared_keywords: string[] }[]; total_nodes: number; total_edges: number } | null>(null);
+
+  const buildGraph = async () => {
+    if (papers.length < 2) return;
+    const res = await fetch('http://127.0.0.1:8000/api/literature/citation-graph', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ papers: papers.slice(0, 20) }),
+    });
+    const data = await res.json();
+    setGraph(data);
+  };
+
   const saveInterests = async (updated: string[]) => {
     setInterests(updated);
     await fetch('http://127.0.0.1:8000/api/literature/interests', {
@@ -164,6 +177,10 @@ export const LiteraturePanel: React.FC = () => {
             style={{ padding: '6px 16px', background: 'transparent', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
             找思路
           </button>
+          <button onClick={buildGraph} disabled={papers.length < 2}
+            style={{ padding: '6px 16px', background: 'transparent', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
+            引用图
+          </button>
           {papers.length > 0 && (
             <span style={{ fontSize: 12, color: '#aaa', alignSelf: 'center' }}>
               {papers.length} papers
@@ -193,6 +210,42 @@ export const LiteraturePanel: React.FC = () => {
           <div style={{ fontSize: 15, marginBottom: 8 }}>No papers yet</div>
           <div style={{ fontSize: 13 }}>
             Add your research interests above and click "Refresh Feed"
+          </div>
+        </div>
+      )}
+
+      {/* Citation graph */}
+      {graph && (
+        <div style={{ marginBottom: 20, border: '1px solid var(--border)', borderRadius: 10, padding: 16, background: 'var(--bg-card)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontWeight: 600, fontSize: 15 }}>Citation Graph ({graph.total_nodes} papers, {graph.total_edges} connections)</span>
+            <button onClick={() => setGraph(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>×</button>
+          </div>
+          <div style={{ maxHeight: 400, overflow: 'auto' }}>
+            {graph.edges.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>No shared keywords between papers. Try adding more papers.</div>
+            ) : (
+              <div>
+                {graph.edges.slice(0, 20).map((edge, i) => {
+                  const src = graph.nodes.find((n: { id: string }) => n.id === edge.source);
+                  const tgt = graph.nodes.find((n: { id: string }) => n.id === edge.target);
+                  return (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0',
+                      borderBottom: '1px solid var(--border-light)', fontSize: 12,
+                    }}>
+                      <span style={{ fontWeight: 500, flex: 1, textAlign: 'right', color: 'var(--accent)' }}>{src?.name || edge.source}</span>
+                      <span style={{
+                        flexShrink: 0, padding: '2px 8px', borderRadius: 10, fontSize: 10,
+                        background: `color-mix(in srgb, var(--accent) ${edge.weight * 20}%, transparent)`,
+                        color: 'var(--accent)', fontWeight: 600,
+                      }}>{edge.weight} shared</span>
+                      <span style={{ fontWeight: 500, flex: 1, color: 'var(--text-primary)' }}>{tgt?.name || edge.target}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

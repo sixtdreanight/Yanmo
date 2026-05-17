@@ -1,0 +1,33 @@
+# Flatpak manifest for 研墨 (YanMo)
+# flatpak-builder build-dir distribution/flatpak.yml --install --user
+
+app-id: com.yanmo.app
+runtime: org.freedesktop.Platform
+runtime-version: "24.08"
+sdk: org.freedesktop.Sdk
+command: yanmo
+finish-args:
+  - --share=network
+  - --socket=x11
+  - --socket=wayland
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Notifications
+
+modules:
+  - name: python3-deps
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app fastapi uvicorn chromadb sympy scipy feedparser aiohttp ollama httpx pydantic sentence-transformers
+    sources: []
+
+  - name: yanmo
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app -e .
+      - install -Dm755 scripts/yanmo-desktop /app/bin/yanmo
+      - install -Dm644 distribution/icon.svg /app/share/icons/hicolor/scalable/apps/com.yanmo.app.svg
+      - install -Dm644 distribution/com.yanmo.app.desktop /app/share/applications/com.yanmo.app.desktop
+    sources:
+      - type: git
+        url: https://github.com/sixtdreanight/Yanmo.git
+        tag: v0.1.0

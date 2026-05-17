@@ -2,6 +2,9 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from backend.plugins.literature.summarizer import summarize_paper
 from backend.plugins.literature.dedup import deduplicate
+from backend.plugins.literature.citation_classifier import classify_citations, summarize_citations
+from backend.plugins.literature.citation_graph import build_graph
+from backend.plugins.literature.systematic_review import get_workflow
 from backend.plugins.literature.crawlers import CrawlerManager
 from backend.plugins.literature.crawlers.arxiv import ArxivCrawler
 from backend.plugins.literature.crawlers.semantic_scholar import SemanticScholarCrawler
@@ -121,5 +124,22 @@ def create_router(plugin) -> APIRouter:
         router_llm = request.app.state.llm_router
         summary = await summarize_paper(req, router_llm)
         return {"summary": summary}
+
+    @router.post("/classify-citations")
+    async def classify_cites(data: dict):
+        citations = data.get("citations", [])
+        classified = classify_citations(citations)
+        summary = summarize_citations(classified)
+        return {"classified": classified, "summary": summary}
+
+    @router.post("/citation-graph")
+    async def citation_graph(data: dict):
+        papers = data.get("papers", [])
+        graph = build_graph(papers)
+        return graph
+
+    @router.get("/systematic-review")
+    async def systematic_review():
+        return {"workflow": get_workflow()}
 
     return router
