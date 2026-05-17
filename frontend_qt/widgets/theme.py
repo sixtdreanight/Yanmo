@@ -1,12 +1,31 @@
-"""Warm theme for 研墨 Qt frontend."""
+"""Warm theme for 研墨 Qt frontend — cross-platform."""
 
-WARM_QSS = """
+import platform
+import sys
+
+# Platform-specific font fallbacks
+_SYSTEM = platform.system()
+
+if _SYSTEM == "Windows":
+    SANS_FONT = '"Noto Sans SC", "Microsoft YaHei", sans-serif'
+    SERIF_FONT = '"Noto Serif SC", "SimSun", serif'
+    MONO_FONT = '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace'
+elif _SYSTEM == "Darwin":
+    SANS_FONT = '"Noto Sans SC", "PingFang SC", "Helvetica Neue", sans-serif'
+    SERIF_FONT = '"Noto Serif SC", "Songti SC", "Georgia", serif'
+    MONO_FONT = '"JetBrains Mono", "Fira Code", "SF Mono", monospace'
+else:  # Linux
+    SANS_FONT = '"Noto Sans SC", "WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif'
+    SERIF_FONT = '"Noto Serif SC", "Noto Serif CJK SC", "Georgia", serif'
+    MONO_FONT = '"JetBrains Mono", "Fira Code", "DejaVu Sans Mono", monospace'
+
+_QSS_BASE = """
 /* === 研墨 · Warm Theme === */
 
 QMainWindow, QDialog, QWidget {
     background-color: #fdf6f0;
     color: #373a3c;
-    font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    font-family: __SANS_FONT__;
     font-size: 14px;
 }
 
@@ -152,7 +171,7 @@ QListWidget::item:selected {
 }
 
 QLabel.title {
-    font-family: "Noto Serif SC", serif;
+    font-family: __SERIF_FONT__;
     font-size: 16px;
     font-weight: 700;
     color: #373a3c;
@@ -199,3 +218,8 @@ QPushButton:hover {
     border-color: #d97706;
 }
 """
+
+# Apply platform-specific font families
+WARM_QSS = _QSS_BASE.replace("__SANS_FONT__", SANS_FONT)
+WARM_QSS = WARM_QSS.replace("__SERIF_FONT__", SERIF_FONT)
+WARM_QSS = WARM_QSS.replace("__MONO_FONT__", MONO_FONT)

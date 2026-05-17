@@ -1,6 +1,7 @@
-"""研墨 — Native Qt Desktop Application."""
+"""研墨 — Native Qt Desktop Application. Cross-platform: Windows, macOS, Linux."""
 
 import sys
+import platform
 from pathlib import Path
 
 # Ensure project root is on path
@@ -13,6 +14,10 @@ from frontend_qt.main_window import MainWindow
 
 
 def main():
+    # macOS: use Fusion style for consistent cross-platform look
+    if platform.system() == "Darwin":
+        sys.argv += ["-style", "Fusion"]
+
     # High DPI support
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
@@ -20,6 +25,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("研墨")
     app.setOrganizationName("YanMo")
+    app.setOrganizationDomain("yanmo.app")
 
     window = MainWindow()
     window.show()
