@@ -28,3 +28,4 @@ frontend/src-tauri/Cargo.lock
 .DS_Store
 Thumbs.db
 docs/
+dist/
