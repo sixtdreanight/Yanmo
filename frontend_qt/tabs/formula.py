@@ -1,5 +1,6 @@
 """验公式 — Qt tab."""
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QTextEdit, QPushButton, QFrame, QSplitter,
@@ -38,7 +39,7 @@ class FormulaTab(QWidget):
         rl.addWidget(QLabel("渲染预览"))
 
         self.preview = QLabel("...")
-        self.preview.setAlignment(0x0084)  # AlignCenter
+        self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview.setStyleSheet(
             "background: #fffbf7; border: 1px solid #e8e0d5; border-radius: 8px; "
             "font-size: 20px; padding: 20px;"
