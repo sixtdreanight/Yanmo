@@ -5,7 +5,13 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)]()
 
-本地优先的科研助手。数据不出你的电脑。
+**一个跑在你电脑上、数据不出门的科研助手。**
+
+跟通用 AI 聊天不一样。研墨是专门给做科研的人用的：能拆解导师给的模糊方向、跨源追踪最新论文、交叉验证公式推导、客观评估项目方案、辅助论文写作。五个工具各有各的界面，不是塞进一个聊天框里将就。
+
+核心就三条：**数据不出本机、公式不允许出错、支持装自己的插件。**
+
+桌面应用，不是网页。Windows、Linux、macOS 都能跑。
 
 ## 安装与运行
 
