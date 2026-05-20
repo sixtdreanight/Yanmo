@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)]()
 
-**A privacy-first research assistant that runs locally on your machine — your data never leaves your computer.**
+**A research assistant that runs on your own machine. Your data stays put.**
 
 **一个跑在你电脑上、数据不出门的科研助手。**
 
