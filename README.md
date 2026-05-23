@@ -121,6 +121,10 @@ Default: all operations use local Ollama. Cloud API keys are optional — if you
 | Desktop Shell | Tauri (Rust) |
 | Fonts | Noto Sans SC, Noto Serif SC |
 
+## Related / 相关项目
+
+- [myBlog](https://github.com/sixtdreanight/myBlog) — 作者博客，更多科研相关文章
+
 ## License
 
 MIT
