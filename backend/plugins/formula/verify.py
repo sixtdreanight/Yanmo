@@ -52,19 +52,47 @@ def verify_formula(expression: str, domain: str = "real") -> FormulaVerification
 
 
 def latex_to_sympy(latex_str: str) -> str:
-    s = latex_str
-    s = s.replace("\\frac{", "(").replace("}{", ")/(").replace("}", ")")
-    s = s.replace("\\sqrt", "sqrt")
-    s = s.replace("\\sum", "Sum")
-    s = s.replace("\\int", "Integral")
-    s = s.replace("\\alpha", "alpha")
-    s = s.replace("\\beta", "beta")
-    s = s.replace("\\theta", "theta")
-    s = s.replace("\\pi", "pi")
-    s = s.replace("\\infty", "oo")
-    s = s.replace("\\cdot", "*")
-    s = s.replace("^", "**")
-    s = s.replace("{", "(").replace("}", ")")
+    """Convert LaTeX string to a SymPy-compatible expression string.
+
+    Uses sympy.parsing.latex.parse_latex when available (sympy >= 1.6),
+    falling back to a regex-based approach for broader LaTeX construct support.
+    """
+    # Attempt 1: Use sympy.parsing.latex.parse_latex (sympy >= 1.6)
+    try:
+        from sympy.parsing.latex import parse_latex
+        from sympy import sstr
+        expr = parse_latex(latex_str)
+        return sstr(expr)
+    except Exception:
+        pass
+
+    # Attempt 2: Regex-based fallback
+    s = latex_str.strip()
+
+    # Handle \frac{a}{b} -> (a)/(b)
+    s = re.sub(r'\\frac\{([^}]*)\}\{([^}]*)\}', r'(\1)/(\2)', s)
+    # Handle \sqrt[n]{x} and \sqrt{x}
+    s = re.sub(r'\\sqrt(?:\[([^}]*)\])?\{([^}]*)\}', r'sqrt(\2)', s)
+    # Handle common Greek / LaTeX commands
+    s = re.sub(r'\\alpha', 'alpha', s)
+    s = re.sub(r'\\beta', 'beta', s)
+    s = re.sub(r'\\theta', 'theta', s)
+    s = re.sub(r'\\pi', 'pi', s)
+    s = re.sub(r'\\infty', 'oo', s)
+    s = re.sub(r'\\cdot', '*', s)
+    s = re.sub(r'\\times', '*', s)
+    s = re.sub(r'\\sum', 'Sum', s)
+    s = re.sub(r'\\int', 'Integral', s)
+    s = re.sub(r'\\partial', 'partial', s)
+    s = re.sub(r'\\mathrm\{([^}]*)\}', r'\1', s)
+    s = re.sub(r'\\text\{([^}]*)\}', r'\1', s)
+    # Handle superscripts ^ and subscripts _
+    s = re.sub(r'\^\{([^}]*)\}', r'**(\1)', s)
+    s = re.sub(r'\^([a-zA-Z0-9])', r'**\1', s)
+    s = re.sub(r'_\{([^}]*)\}', r'_\1', s)
+    s = re.sub(r'_([a-zA-Z0-9])', r'_\1', s)
+    # Clean up remaining braces -> parentheses
+    s = s.replace('{', '(').replace('}', ')')
     return s
 
 

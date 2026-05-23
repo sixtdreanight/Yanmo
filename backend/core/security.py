@@ -1,3 +1,4 @@
+from collections import deque
 from enum import Enum
 from datetime import datetime, timezone
 from typing import Any
@@ -9,11 +10,13 @@ class Classification(str, Enum):
     PUBLIC = "public"
 
 
+MAX_AUDIT_ENTRIES = 10000
+
 class SecurityManager:
     def __init__(self) -> None:
         self._classifications: dict[str, Classification] = {}
         self._cloud_approvals: set[str] = set()
-        self._audit: list[dict[str, Any]] = []
+        self._audit: deque[dict[str, Any]] = deque(maxlen=MAX_AUDIT_ENTRIES)
 
     def mark(self, doc_id: str, level: Classification) -> None:
         self._classifications[doc_id] = level

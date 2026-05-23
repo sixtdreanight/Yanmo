@@ -1,7 +1,10 @@
 import json
+import logging
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -23,7 +26,17 @@ class Config:
         if config_path.exists():
             with open(config_path) as f:
                 raw = json.load(f)
-            return cls(**{k: v for k, v in raw.items() if k in cls.__dataclass_fields__})
+            cfg = cls(**{k: v for k, v in raw.items() if k in cls.__dataclass_fields__})
+            # SECURITY WARNING: cloud_api_key stored in plaintext in config.json.
+            # For production deployments, use environment variables or a system
+            # keychain instead to avoid leaking credentials through VCS or backups.
+            if cfg.cloud_api_key:
+                logger.warning(
+                    "cloud_api_key found in config.json — storing API keys in "
+                    "plaintext files is not recommended for production. Consider "
+                    "using environment variables or a system keychain instead."
+                )
+            return cfg
         cfg = cls()
         cfg.data_dir = data_dir
         return cfg

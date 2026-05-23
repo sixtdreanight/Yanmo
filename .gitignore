@@ -11,6 +11,9 @@ build/
 .venv/
 venv/
 
+# Secrets (API keys, credentials)
+config.json
+
 # IDE
 .vscode/
 .idea/
