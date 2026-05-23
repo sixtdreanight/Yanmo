@@ -48,3 +48,12 @@ class SecurityManager:
 
     def audit_log(self) -> list[dict[str, Any]]:
         return list(self._audit)
+
+    def audit_log_persist(self, path: str) -> None:
+        """将审计日志追加写入磁盘文件。"""
+        import json
+        entries = list(self._audit)
+        with open(path, "a") as f:
+            for entry in entries:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        self._audit.clear()

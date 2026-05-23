@@ -4,10 +4,11 @@ import importlib
 import json
 import logging
 import os
+import secrets
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -51,6 +52,27 @@ def _hash_messages(messages: list[dict]) -> str:
     """Deterministic SHA-256 hash of messages for audit trail."""
     canonical = json.dumps(messages, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+def _load_or_generate_token(config: Config) -> str:
+    """加载或生成本地 API 认证 token，持久化到 config。"""
+    token_path = os.path.join(config.data_dir, ".api_token")
+    try:
+        if os.path.exists(token_path):
+            with open(token_path, "r") as f:
+                return f.read().strip()
+    except (OSError, PermissionError):
+        pass
+    token = secrets.token_hex(32)
+    os.makedirs(os.path.dirname(token_path), exist_ok=True)
+    with open(token_path, "w") as f:
+        f.write(token)
+    # 限制文件权限（Unix）
+    try:
+        os.chmod(token_path, 0o600)
+    except (OSError, NotImplementedError):
+        pass
+    return token
 
 
 def _rebuild_llm_router(config: Config, app: FastAPI) -> None:
@@ -119,12 +141,31 @@ def create_app(config: Config) -> FastAPI:
 
     app = FastAPI(title="研墨", version="0.1.0", lifespan=lifespan)
 
+    # 生成本地 API 认证 token（首次启动后固定）
+    auth_token = _load_or_generate_token(config)
+    app.state.auth_token = auth_token
+    logger.info("API auth token initialized (first 8 chars): %s...", auth_token[:8])
+
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        # 跳过健康检查等公开端点
+        if request.url.path in ("/health", "/docs", "/openapi.json"):
+            return await call_next(request)
+        # WebSocket 通过查询参数传 token
+        if request.url.path == "/api/ws":
+            token = request.query_params.get("token", "")
+        else:
+            token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        if token != app.state.auth_token:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        return await call_next(request)
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://localhost:5174", "tauri://localhost"],
+        allow_origins=["http://localhost:5173", "http://localhost:5174", "tauri://localhost", "https://tauri.localhost"],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Content-Type", "Authorization"],
     )
 
     app.state.bus = bus
@@ -210,6 +251,11 @@ def create_app(config: Config) -> FastAPI:
     # WebSocket for real-time push
     @app.websocket("/api/ws")
     async def websocket_endpoint(ws: WebSocket):
+        # WebSocket 通过查询参数传 token（URL 安全）
+        token = ws.query_params.get("token", "")
+        if token != app.state.auth_token:
+            await ws.close(code=4001, reason="Unauthorized")
+            return
         await ws.accept()
         # Forward event bus events to WebSocket
         async def forward(data: dict):

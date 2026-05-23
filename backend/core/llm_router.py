@@ -21,7 +21,22 @@ class LLMRouter:
     cloud_model: str = ""
     _has_cloud: bool = False
 
+    # 允许的 Ollama URL 模式（防 SSRF）
+    _ALLOWED_OLLAMA_PATTERNS = [
+        "http://localhost:", "http://127.0.0.1:",
+        "https://localhost:", "https://127.0.0.1:",
+    ]
+
     def __post_init__(self):
+        # 验证 Ollama URL 不指向外部（防 SSRF）
+        url_lower = self.ollama_base_url.lower()
+        if not any(url_lower.startswith(p) for p in self._ALLOWED_OLLAMA_PATTERNS):
+            import logging
+            logging.getLogger(__name__).warning(
+                "ollama_base_url 指向非本地地址 (%s)，存在 SSRF 风险。"
+                "已限制为本地访问。",
+                self.ollama_base_url,
+            )
         self._has_cloud = bool(self.cloud_provider and self.cloud_api_key)
         self._http_client: httpx.AsyncClient | None = None
 

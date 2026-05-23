@@ -103,7 +103,8 @@ def sympy_verify(latex_str: str) -> FormulaVerification:
     try:
         import sympy
         python_expr = latex_to_sympy(latex_str)
-        sympy_parsed = sympy.sympify(python_expr)
+        # 安全: parse_expr() 只解析表达式，不执行 eval()（与 sympify() 不同）
+        sympy_parsed = sympy.parse_expr(python_expr)
         suggestions.append(f"SymPy 解析成功: {sympy_parsed}")
     except Exception as e:
         errors.append(f"SymPy 解析失败: {str(e)[:100]}")

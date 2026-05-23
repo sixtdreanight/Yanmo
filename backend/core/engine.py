@@ -64,6 +64,10 @@ class PluginEngine:
             return False
 
         try:
+            # SECURITY: 仅从受信任目录加载（builtin: backend/plugins/, user: ~/.yanmo/plugins/）
+            # 插件在进程内运行，可访问 os/subprocess/socket。生产部署建议：
+            #   1. 验证 plugin.toml 签名
+            #   2. 使用 subprocess/multiprocessing 隔离不受信任的第三方插件
             spec = importlib.util.spec_from_file_location(
                 f"plugins.{plugin_name}", plugin_file
             )

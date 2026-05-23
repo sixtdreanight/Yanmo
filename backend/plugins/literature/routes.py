@@ -119,23 +119,31 @@ def create_router(plugin) -> APIRouter:
             "errors": result.errors[:5],
         }
 
+    class SummarizeRequest(BaseModel):
+        title: str = Field(max_length=500)
+        summary: str = Field(max_length=5000)
+
+    class ClassifyCitationsRequest(BaseModel):
+        citations: list[dict] = Field(max_length=200)
+
+    class CitationGraphRequest(BaseModel):
+        papers: list[dict] = Field(max_length=200)
+
     @router.post("/summarize")
-    async def summarize(req: dict, request: Request):
+    async def summarize(req: SummarizeRequest, request: Request):
         router_llm = request.app.state.llm_router
-        summary = await summarize_paper(req, router_llm)
+        summary = await summarize_paper(req.model_dump(), router_llm)
         return {"summary": summary}
 
     @router.post("/classify-citations")
-    async def classify_cites(data: dict):
-        citations = data.get("citations", [])
-        classified = classify_citations(citations)
+    async def classify_cites(data: ClassifyCitationsRequest):
+        classified = classify_citations(data.citations)
         summary = summarize_citations(classified)
         return {"classified": classified, "summary": summary}
 
     @router.post("/citation-graph")
-    async def citation_graph(data: dict):
-        papers = data.get("papers", [])
-        graph = build_graph(papers)
+    async def citation_graph(data: CitationGraphRequest):
+        graph = build_graph(data.papers)
         return graph
 
     @router.get("/systematic-review")
