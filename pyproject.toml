@@ -1,6 +1,6 @@
 [project]
 name = "yanmo"
-version = "0.1.0"
+version = "0.1.1"
 description = "研墨 · 本地优先的科研助手"
 requires-python = ">=3.11"
 dependencies = [
