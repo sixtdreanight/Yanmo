@@ -56,6 +56,12 @@ class PluginEngine:
             manifests.extend(self.discover_plugins(d))
         return manifests
 
+    def _is_user_plugin(self, plugin_path: str) -> bool:
+        """Check if a plugin path is from the user plugins directory (untrusted)."""
+        if not self._user_plugins_dir:
+            return False
+        return os.path.abspath(plugin_path).startswith(os.path.abspath(self._user_plugins_dir))
+
     async def load_plugin_from_path(self, plugin_path: str, plugin_name: str) -> bool:
         """Load a plugin from its directory path. Returns True on success."""
         plugin_file = os.path.join(plugin_path, "plugin.py")
@@ -63,11 +69,26 @@ class PluginEngine:
             logger.warning("No plugin.py found at %s", plugin_path)
             return False
 
+        # Security gate: user plugins run in-process and can access the filesystem,
+        # network, and sensitive config files like .api_token
+        if self._is_user_plugin(plugin_path):
+            if not self._config.get("allow_untrusted_plugins", False):
+                logger.warning(
+                    "Refusing to load user plugin '%s' from %s — third-party plugins "
+                    "run in-process and can read files (including .api_token), access the "
+                    "network, and execute arbitrary code. Set 'allow_untrusted_plugins: true' "
+                    "in config.json to enable. Only enable if you have reviewed the plugin source code.",
+                    plugin_name, plugin_path,
+                )
+                return False
+            logger.warning(
+                "Loading untrusted plugin '%s' from %s. The plugin has full access to the "
+                "filesystem and network. Ensure you trust the source.",
+                plugin_name, plugin_path,
+            )
+
         try:
-            # SECURITY: 仅从受信任目录加载（builtin: backend/plugins/, user: ~/.yanmo/plugins/）
-            # 插件在进程内运行，可访问 os/subprocess/socket。生产部署建议：
-            #   1. 验证 plugin.toml 签名
-            #   2. 使用 subprocess/multiprocessing 隔离不受信任的第三方插件
+            # 插件在进程内运行，可访问 os/subprocess/socket
             spec = importlib.util.spec_from_file_location(
                 f"plugins.{plugin_name}", plugin_file
             )

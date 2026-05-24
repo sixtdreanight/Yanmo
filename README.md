@@ -42,12 +42,18 @@ Open `http://localhost:5173` in your browser.
 
 ### Desktop App / 桌面应用
 
+> **Note (2026-05):** The primary supported frontend is the React Web app (`frontend/`).
+> The Tauri desktop shell (`frontend/src-tauri/`) and the Qt frontend (`frontend_qt/`) are
+> **deprecated** and will be removed in a future release. Maintaining three frontends is
+> unsustainable for a small team. If you rely on the Tauri or Qt frontend, please open an
+> issue to discuss migration to the Web frontend.
+
 Install [Rust](https://rustup.rs), then:
 
 ```bash
 cd frontend
-cargo tauri dev      # Dev mode with hot reload
-cargo tauri build    # Package as exe / app / deb
+cargo tauri dev      # Dev mode with hot reload (deprecated)
+cargo tauri build    # Package as exe / app / deb (deprecated)
 ```
 
 The Tauri window auto-launches the Python backend on start and kills the process on close.

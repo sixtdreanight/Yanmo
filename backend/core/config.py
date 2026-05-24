@@ -47,6 +47,7 @@ class Config:
     cloud_model: str = ""
     default_classification: str = "cautious"
     data_dir: str = field(default_factory=lambda: str(Path.home() / ".yanmo"))
+    allow_untrusted_plugins: bool = False
 
     _SENSITIVE = {"cloud_api_key"}
 
